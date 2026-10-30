@@ -1,0 +1,278 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lost & Found - เว็บประกาศของหาย</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f6fb;
+  color: #26364b;
+}
+header {
+  background: #142d4e;
+  color: white;
+  padding: 22px;
+  text-align: center;
+}
+header h1 { margin: 0 0 10px; }
+.hero {
+  text-align: center;
+  padding: 35px 15px;
+  background: #e5edf8;
+}
+.hero h2 { font-size: 28px; }
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 20px;
+}
+button {
+  background: #f5b82e;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:hover { opacity: .85; }
+.search {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #ccd5e0;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.actions button { flex: 1; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(230px,1fr));
+  gap: 18px;
+}
+.card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 3px 12px #00000012;
+}
+.card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: #ddd;
+}
+.card-content { padding: 15px; }
+.tag {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  background: #ffe6e6;
+  color: #c0392b;
+}
+.found { background: #dcfce7; color: #15803d; }
+form {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  display: none;
+}
+form input, form select, form textarea {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0 14px;
+  border: 1px solid #ccd5e0;
+  border-radius: 7px;
+}
+footer {
+  text-align: center;
+  padding: 25px;
+  background: #142d4e;
+  color: white;
+  margin-top: 40px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔎 LOST & FOUND</h1>
+  <p>ศูนย์กลางประกาศตามหาของหาย</p>
+</header>
+
+<section class="hero">
+  <h2>ของหาย อย่าเพิ่งหมดหวัง!</h2>
+  <p>ร่วมเป็นส่วนหนึ่งในการช่วยเหลือและคืนสิ่งของให้เจ้าของ</p>
+  <button onclick="showForm()">+ ลงประกาศ</button>
+</section>
+
+<main class="container">
+
+  <h2>📝 ลงประกาศของหาย / พบของ</h2>
+
+  <form id="postForm">
+    <label>ประเภทประกาศ</label>
+    <select id="type">
+      <option value="lost">ตามหาของหาย</option>
+      <option value="found">พบสิ่งของ</option>
+    </select>
+
+    <label>ชื่อสิ่งของ</label>
+    <input id="name" placeholder="เช่น กระเป๋าสตางค์" required>
+
+    <label>รายละเอียด</label>
+    <textarea id="detail" placeholder="อธิบายลักษณะสิ่งของ..." required></textarea>
+
+    <label>สถานที่</label>
+    <input id="place" placeholder="สถานที่ที่หายหรือพบ" required>
+
+    <label>วันที่</label>
+    <input id="date" type="date" required>
+
+    <label>เบอร์โทรติดต่อ</label>
+    <input id="phone" type="tel" placeholder="เบอร์โทรศัพท์">
+
+    <label>รูปภาพ</label>
+    <input id="photo" type="file" accept="image/*">
+
+    <button type="submit">เผยแพร่ประกาศ</button>
+    <button type="button" onclick="hideForm()">ยกเลิก</button>
+  </form>
+
+  <h2>📢 ประกาศทั้งหมด</h2>
+
+  <input class="search" id="search"
+    placeholder="🔍 ค้นหาสิ่งของหรือสถานที่..."
+    oninput="renderPosts()">
+
+  <div class="actions">
+    <button onclick="filter='all';renderPosts()">ทั้งหมด</button>
+    <button onclick="filter='lost';renderPosts()">ตามหาของหาย</button>
+    <button onclick="filter='found';renderPosts()">พบสิ่งของ</button>
+  </div>
+
+  <div class="grid" id="posts"></div>
+</main>
+
+<footer>
+  <p>© 2026 Lost & Found | ช่วยกันตามหาของหาย</p>
+</footer>
+
+<script>
+let posts = JSON.parse(localStorage.getItem('posts') || '[]');
+let filter = 'all';
+
+function showForm() {
+  document.getElementById('postForm').style.display = 'block';
+  document.getElementById('postForm').scrollIntoView();
+}
+function hideForm() {
+  document.getElementById('postForm').style.display = 'none';
+}
+
+document.getElementById('postForm').onsubmit = function(e) {
+  e.preventDefault();
+
+  const file = document.getElementById('photo').files[0];
+
+  function savePost(image) {
+    const post = {
+      id: Date.now(),
+      type: document.getElementById('type').value,
+      name: document.getElementById('name').value,
+      detail: document.getElementById('detail').value,
+      place: document.getElementById('place').value,
+      date: document.getElementById('date').value,
+      phone: document.getElementById('phone').value,
+      image: image
+    };
+
+    posts.unshift(post);
+    localStorage.setItem('posts', JSON.stringify(posts));
+    e.target.reset();
+    hideForm();
+    renderPosts();
+    alert('ลงประกาศเรียบร้อยแล้ว!');
+  }
+
+  if (file) {
+    if (file.size > 1024 * 1024) {
+      alert('กรุณาเลือกรูปขนาดไม่เกิน 1 MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => savePost(reader.result);
+    reader.readAsDataURL(file);
+  } else {
+    savePost('');
+  }
+};
+
+function renderPosts() {
+  const container = document.getElementById('posts');
+  const keyword = document.getElementById('search').value.toLowerCase();
+
+  const filtered = posts.filter(p =>
+    (filter === 'all' || p.type === filter) &&
+    (p.name + p.place + p.detail).toLowerCase().includes(keyword)
+  );
+
+  container.innerHTML = '';
+
+  if (!filtered.length) {
+    container.innerHTML = '<p>ไม่พบประกาศที่ค้นหา</p>';
+    return;
+  }
+
+  filtered.forEach(p => {
+    const card = document.createElement('article');
+    card.className = 'card';
+
+    const img = document.createElement('img');
+    img.src = p.image || 'https://placehold.co/500x300?text=Lost+%26+Found';
+    img.alt = 'รูปสิ่งของ';
+
+    const content = document.createElement('div');
+    content.className = 'card-content';
+
+    const tag = document.createElement('span');
+    tag.className = 'tag' + (p.type === 'found' ? ' found' : '');
+    tag.textContent = p.type === 'lost' ? 'ตามหาของหาย' : 'พบสิ่งของ';
+
+    const title = document.createElement('h3');
+    title.textContent = p.name;
+
+    const detail = document.createElement('p');
+    detail.textContent = p.detail;
+
+    const place = document.createElement('p');
+    place.textContent = '📍 ' + p.place;
+
+    const date = document.createElement('p');
+    date.textContent = '📅 ' + p.date;
+
+    const phone = document.createElement('p');
+    phone.textContent = p.phone ? '📞 ' + p.phone : 'ไม่มีเบอร์ติดต่อ';
+
+    content.append(tag, title, detail, place, date, phone);
+    card.append(img, content);
+    container.appendChild(card);
+  });
+}
+
+renderPosts();
+</script>
+
+</body>
+</html>
